@@ -7,6 +7,7 @@ from posixpath import join
 import pycurl
 import pandas as pd
 
+from custom_reports import CustomReports
 from egr_data_process import EgrDataProcess
 
 
@@ -101,3 +102,5 @@ class ErgParser:
 if __name__ == "__main__":
     parser = ErgParser()
     parser.run(ErgRunMode.PROCESS)
+    CustomReports().update_reports()
+
