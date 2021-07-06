@@ -17,6 +17,11 @@ class EgrDataProcess:
     BASE_INFO = join(ROOT_DIR, "getBaseInfoByPeriod")
     VED_DIR = join(ROOT_DIR, "getVEDByPeriod")
     MODEL_DIR = join(ROOT_DIR, "erg_model")
+    ADRESSES_MODEL = join(MODEL_DIR, "adresses.csv")
+    EVENTS_MODEL = join(MODEL_DIR, "events.csv")
+    SHORT_INFO_MODEL = join(MODEL_DIR, "short_info.csv")
+    BASE_MODEL = join(MODEL_DIR, "base_info.csv")
+    VED_MODEL = join(MODEL_DIR, "ved.csv")
 
     @staticmethod
     def concat_files(directory):
@@ -32,7 +37,7 @@ class EgrDataProcess:
              'vfax']]
         adresses.loc[:, 'vnsfull'] = adresses.loc[:, 'nsi00202'].apply(lambda x: get_value(x, 'vnsfull'))
         adresses = adresses.drop(columns=[i for i in adresses.columns if 'nsi' in i])
-        adresses.to_csv(join(self.MODEL_DIR, 'adresses.csv'), index=False)
+        adresses.to_csv(self.ADRESSES_MODEL, index=False)
 
     def process_events(self):
         events = self.concat_files(self.EVENTS_DIR)
@@ -46,7 +51,7 @@ class EgrDataProcess:
         events.loc[:, 'basis_name'] = events.loc[:, 'nsi00213'].apply(lambda x: get_value(x, 'vnosn'))
         events.loc[:, 'doc_nkuz'] = events.loc[:, 'nsi00212'].apply(lambda x: get_value(x, 'nkuz'))
         events = events.drop(columns=[i for i in events.columns if 'nsi' in i])
-        events.to_csv(join(self.MODEL_DIR, 'events.csv'), index=False)
+        events.to_csv(self.EVENTS_MODEL, index=False)
 
     def process_base_info(self):
         base_info = self.concat_files(self.BASE_INFO)
@@ -55,16 +60,16 @@ class EgrDataProcess:
         base_info.loc[:, 'type'] = base_info.loc[:, 'nsi00211'].apply(lambda x: get_value(x, 'nkvob'))
         base_info.loc[:, 'vnuzp'] = base_info.loc[:, 'nsi00212'].apply(lambda x: get_value(x, 'vnuzp'))
         base_info = base_info.drop(columns=[i for i in base_info.columns if 'nsi' in i])
-        base_info.to_csv(join(self.MODEL_DIR, 'base_info.csv'), index=False)
+        base_info.to_csv(self.BASE_MODEL, index=False)
 
     def process_short_info(self):
         short_info = self.concat_files(self.SHORT_INFO)
         short_info = short_info[['vfio', 'ngrn', 'vnaim']]
-        short_info.to_csv(join(self.MODEL_DIR, 'short_info.csv'), index=False)
+        short_info.to_csv(self.SHORT_INFO_MODEL, index=False)
 
     def process_ved(self):
         ved = self.concat_files(self.VED_DIR)
         ved.loc[:, 'ved_name'] = ved.loc[:, 'nsi00114'].apply(lambda x: get_value(x, 'vnvdnp'))
         ved.loc[:, 'ved_code'] = ved.loc[:, 'nsi00114'].apply(lambda x: get_value(x, 'vkvdn'))
         ved = ved.drop(columns=[i for i in ved.columns if 'nsi' in i])
-        ved.to_csv(join(self.MODEL_DIR, 'ved.csv'), index=False)
+        ved.to_csv(self.VED_MODEL, index=False)
