@@ -2,10 +2,19 @@ import os
 
 import pandas as pd
 from posixpath import join
+import json
 
 
 def get_value(data, value):
-    if type(data) == dict:
+    if type(data) == str:
+        tmp = data.replace("'", '"')
+        data = json.loads(tmp)
+        return data[value]
+
+
+def get_value_eval(data, value):
+    if type(data) == str:
+        data = eval(data)
         return data[value]
 
 
@@ -46,10 +55,10 @@ class EgrDataProcess:
              'vprim']]
         events.loc[:, 'decision_code'] = events.loc[:, 'nsi00223'].apply(lambda x: get_value(x, 'vnop'))
         events.loc[:, 'decision_name'] = events.loc[:, 'nsi00223'].apply(lambda x: get_value(x, 'nsi00223'))
-        events.loc[:, 'decision_nkuz'] = events.loc[:, 'nsi00212R'].apply(lambda x: get_value(x, 'nkuz'))
+        events.loc[:, 'decision_nkuz'] = events.loc[:, 'nsi00212R'].apply(lambda x: get_value_eval(x, 'nkuz'))
         events.loc[:, 'basis_code'] = events.loc[:, 'nsi00213'].apply(lambda x: get_value(x, 'nkosn'))
         events.loc[:, 'basis_name'] = events.loc[:, 'nsi00213'].apply(lambda x: get_value(x, 'vnosn'))
-        events.loc[:, 'doc_nkuz'] = events.loc[:, 'nsi00212'].apply(lambda x: get_value(x, 'nkuz'))
+        events.loc[:, 'doc_nkuz'] = events.loc[:, 'nsi00212'].apply(lambda x: get_value_eval(x, 'nkuz'))
         events = events.drop(columns=[i for i in events.columns if 'nsi' in i])
         events.to_csv(self.EVENTS_MODEL, index=False)
 
@@ -58,7 +67,7 @@ class EgrDataProcess:
         base_info = base_info[['ngrn', 'dfrom', 'dto', 'nsi00219', 'nsi00211', 'nsi00212']]
         base_info.loc[:, 'status'] = base_info.loc[:, 'nsi00219'].apply(lambda x: get_value(x, 'vnsostk'))
         base_info.loc[:, 'type'] = base_info.loc[:, 'nsi00211'].apply(lambda x: get_value(x, 'nkvob'))
-        base_info.loc[:, 'vnuzp'] = base_info.loc[:, 'nsi00212'].apply(lambda x: get_value(x, 'vnuzp'))
+        base_info.loc[:, 'vnuzp'] = base_info.loc[:, 'nsi00212'].apply(lambda x: get_value_eval(x, 'vnuzp'))
         base_info = base_info.drop(columns=[i for i in base_info.columns if 'nsi' in i])
         base_info.to_csv(self.BASE_MODEL, index=False)
 
