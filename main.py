@@ -26,6 +26,8 @@ class ErgRunMode(Enum):
 
 
 def download_egr_data(method, start_date, end_date):
+    request_url = f'http://egr.gov.by/api/v2/egr/{method}/{start_date}/{end_date}'
+    print(request_url)
     b_obj = BytesIO()
     crl = pycurl.Curl()
     crl.setopt(crl.URL, f'http://egr.gov.by/api/v2/egr/{method}/{start_date}/{end_date}')
@@ -33,8 +35,13 @@ def download_egr_data(method, start_date, end_date):
     crl.perform()
     crl.close()
     get_body = b_obj.getvalue()
-    out = pd.read_json(get_body)
-    return out
+    try:
+        out = pd.read_json(get_body)
+        return out
+    except ValueError:
+        print(f'error in {request_url}')
+
+
 
 
 def format_date(date_for_format):
@@ -50,7 +57,7 @@ class ErgParser:
     def __init__(self):
         pass
 
-    def run(self, mode, depth=1):
+    def run(self, mode, depth=0):
         if mode == ErgRunMode.PARTIAL_UPDATE:
             self.partial_download(depth)
         elif mode == ErgRunMode.FULL_UPDATE:
@@ -86,8 +93,9 @@ class ErgParser:
     def download_chunks(self, depth, method):
         for start_date, end_date in self.generate_dates(depth):
             data_chunk = download_egr_data(method, start_date, end_date)
-            path = join(os.path.dirname(__file__), "data", method, f'{method}_{str(start_date)}_{str(end_date)}.csv')
-            data_chunk.to_csv(path, index=False)
+            if data_chunk:
+                path = join(os.path.dirname(__file__), "data", method, f'{method}_{str(start_date)}_{str(end_date)}.csv')
+                data_chunk.to_csv(path, index=False)
 
     @staticmethod
     def process_data():
