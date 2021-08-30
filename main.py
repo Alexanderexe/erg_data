@@ -23,6 +23,7 @@ class ErgRunMode(Enum):
     PARTIAL_UPDATE = 1
     FULL_UPDATE = 2
     PROCESS = 3
+    SKIP = 4
 
 
 def download_egr_data(method, start_date, end_date):
@@ -65,7 +66,7 @@ class ErgParser:
         elif mode == ErgRunMode.PROCESS:
             self.process_data()
             return
-        else:
+        elif mode == ErgRunMode.SKIP:
             return
         self.process_data()
 
@@ -93,7 +94,7 @@ class ErgParser:
     def download_chunks(self, depth, method):
         for start_date, end_date in self.generate_dates(depth):
             data_chunk = download_egr_data(method, start_date, end_date)
-            if data_chunk:
+            if not data_chunk.empty:
                 path = join(os.path.dirname(__file__), "data", method, f'{method}_{str(start_date)}_{str(end_date)}.csv')
                 data_chunk.to_csv(path, index=False)
 
@@ -109,6 +110,6 @@ class ErgParser:
 
 if __name__ == "__main__":
     parser = ErgParser()
-    parser.run(ErgRunMode.PROCESS)
+    parser.run(ErgRunMode.PARTIAL_UPDATE)
     CustomReports().update_reports()
 
