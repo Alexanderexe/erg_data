@@ -2,6 +2,9 @@ from io import BytesIO
 from enum import Enum
 from datetime import datetime, date
 import os
+import logging as l
+import random
+import argparse
 
 from posixpath import join
 import pycurl
@@ -20,29 +23,70 @@ class ErgMethod(Enum):
 
 
 class ErgRunMode(Enum):
-    PARTIAL_UPDATE = 1
-    FULL_UPDATE = 2
-    PROCESS = 3
-    SKIP = 4
+    PARTIAL_UPDATE = 'PARTIAL'
+    FULL_UPDATE = 'FULL'
+    PROCESS = 'PROCESS'
+    SKIP = 'SKIP'
 
 
-def download_egr_data(method, start_date, end_date):
+class Session():
+    def __init__(self, root_dir, model_dir, mode):
+        self.id = None
+        self.directory = None
+        self.logger = None
+        self.parser = None
+        self.root_dir = root_dir
+        self.model_dir = model_dir
+        self.mode = mode
+
+    def create_session(self):
+        self.id = random.getrandbits(16)
+        self.directory = join(self.root_dir, f'{self.mode}' \
+                                             f'-{datetime.today().strftime(format="%d-%m-%Y__%H-%M")}')
+        self.create_directories_structure()
+
+        self.logger = l.Logger('logger')
+        fh = l.FileHandler(f'{self.directory}/log.txt')
+        fh.setLevel(l.INFO)
+        ch = l.StreamHandler()
+        ch.setLevel(l.INFO)
+        # create formatter and add it to the handlers
+        formatter = l.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+
+        self.logger.addHandler(fh)
+        self.logger.info(f'session {self.id} is created at {datetime.today()} with {self.directory} path')
+
+    def start_session(self):
+        self.logger.info(f'run parsing with {self.mode} mode')
+        self.parser = ErgParser(self.logger, self.directory, self.model_dir)
+        self.parser.run(mode=self.mode)
+
+    def create_directories_structure(self):
+        os.mkdir(self.directory)
+        for method_name in ErgMethod:
+            os.mkdir(join(self.directory, method_name.value))
+        os.mkdir(join(self.directory, self.model_dir))
+
+
+def download_egr_data(method, start_date, end_date, logger):
     request_url = f'http://egr.gov.by/api/v2/egr/{method}/{start_date}/{end_date}'
-    print(request_url)
+    logger.info(f'start download {request_url}')
     b_obj = BytesIO()
     crl = pycurl.Curl()
-    crl.setopt(crl.URL, f'http://egr.gov.by/api/v2/egr/{method}/{start_date}/{end_date}')
+    crl.setopt(crl.URL, request_url)
     crl.setopt(crl.WRITEDATA, b_obj)
     crl.perform()
     crl.close()
     get_body = b_obj.getvalue()
     try:
         out = pd.read_json(get_body)
+        logger.info(f'successful read downloaded json {request_url}')
         return out
     except ValueError:
-        print(f'error in {request_url}')
-
-
+        raise ValueError
+        logger.info(f'pandas cant read downloaded json {request_url}')
 
 
 def format_date(date_for_format):
@@ -55,8 +99,10 @@ class ErgParser:
     SHIFT = 1
     DEFAULT = 1
 
-    def __init__(self):
-        pass
+    def __init__(self, logger, data_directory, model_dir_name):
+        self.processor = EgrDataProcess(data_directory, logger=logger)
+        self.logger = logger
+        self.data_directory = data_directory
 
     def run(self, mode, depth=0):
         if mode == ErgRunMode.PARTIAL_UPDATE:
@@ -93,23 +139,29 @@ class ErgParser:
 
     def download_chunks(self, depth, method):
         for start_date, end_date in self.generate_dates(depth):
-            data_chunk = download_egr_data(method, start_date, end_date)
+            data_chunk = download_egr_data(method, start_date, end_date, self.logger)
             if not data_chunk.empty:
-                path = join(os.path.dirname(__file__), "data", method, f'{method}_{str(start_date)}_{str(end_date)}.csv')
+                path = join(os.path.dirname(__file__), self.data_directory, method,
+                            f'{method}_{str(start_date)}_{str(end_date)}.csv')
                 data_chunk.to_csv(path, index=False)
+                self.logger.info(f'chunk save to {path}')
 
-    @staticmethod
-    def process_data():
-        processor = EgrDataProcess()
-        processor.process_adresses()
-        processor.process_events()
-        processor.process_ved()
-        processor.process_base_info()
-        processor.process_short_info()
+    def process_data(self):
+        self.processor.process_adresses()
+        self.processor.process_events()
+        self.processor.process_ved()
+        self.processor.process_base_info()
+        self.processor.process_short_info()
 
 
 if __name__ == "__main__":
-    parser = ErgParser()
-    parser.run(ErgRunMode.PARTIAL_UPDATE)
-    CustomReports().update_reports()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_folder', '-d', type=str, help='path to data_folder', required=True,)
+    parser.add_argument('--mode', '-m', required=True,
+                        help=f'int mode {[i for i in ErgRunMode]}')
+    parser.add_argument('--model_folder', '-mf', type=str, help='path_to_save_model_dir',required=True,)
 
+    args = parser.parse_args()
+    session = Session('data', 'egr_model', ErgRunMode[args.mode.upper()])
+    session.create_session()
+    session.start_session()
