@@ -6,8 +6,8 @@ from posixpath import join
 class CustomReports:
     CUSTOM_REPORTS_DIR = "custom_reports"
 
-    def __init__(self):
-        self.processor = EgrDataProcess()
+    def __init__(self, data_folder_name, model_folder):
+        self.processor = EgrDataProcess(data_folder_name, model_folder)
 
     def update_reports(self):
         self.get_new_clients()
@@ -15,9 +15,9 @@ class CustomReports:
     def get_new_clients(self, gap=6):
         interval_start = (pd.Timestamp.utcnow() - pd.Timedelta(days=gap)).ceil('D')
 
-        base_info = pd.read_csv(self.processor.BASE_MODEL)
-        adresses = pd.read_csv(self.processor.ADRESSES_MODEL)
-        short_info = pd.read_csv(self.processor.SHORT_INFO_MODEL)
+        base_info = pd.read_csv(self.processor.base_model)
+        adresses = pd.read_csv(self.processor.adr_model)
+        short_info = pd.read_csv(self.processor.short_info_model)
 
         base_info.dfrom = pd.to_datetime(base_info.dfrom)
         adresses.dfrom = pd.to_datetime(adresses.dfrom)

@@ -42,7 +42,7 @@ class Session():
     def create_session(self):
         self.id = random.getrandbits(16)
         self.directory = join(self.root_dir, f'{self.mode}' \
-                                             f'-{datetime.today().strftime(format="%d-%m-%Y__%H-%M")}')
+                                             f'-{datetime.today().strftime(format="%d-%m-%Y__%H-%M-%S")}')
         self.create_directories_structure()
 
         self.logger = l.Logger('logger')
@@ -50,7 +50,6 @@ class Session():
         fh.setLevel(l.INFO)
         ch = l.StreamHandler()
         ch.setLevel(l.INFO)
-        # create formatter and add it to the handlers
         formatter = l.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
         ch.setFormatter(formatter)
@@ -62,6 +61,9 @@ class Session():
         self.logger.info(f'run parsing with {self.mode} mode')
         self.parser = ErgParser(self.logger, self.directory, self.model_dir)
         self.parser.run(mode=self.mode)
+
+        custom_reports = CustomReports(self.directory, self.model_dir)
+        custom_reports.get_new_clients()
 
     def create_directories_structure(self):
         os.mkdir(self.directory)
@@ -100,7 +102,7 @@ class ErgParser:
     DEFAULT = 1
 
     def __init__(self, logger, data_directory, model_dir_name):
-        self.processor = EgrDataProcess(data_directory, logger=logger)
+        self.processor = EgrDataProcess(root_dir=data_directory, egr_model=model_dir_name, logger=logger)
         self.logger = logger
         self.data_directory = data_directory
 
@@ -156,12 +158,12 @@ class ErgParser:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_folder', '-d', type=str, help='path to data_folder', required=True,)
+    parser.add_argument('--data_folder_name', '-d', type=str, help='path to data_folder', required=True,)
     parser.add_argument('--mode', '-m', required=True,
                         help=f'int mode {[i for i in ErgRunMode]}')
     parser.add_argument('--model_folder', '-mf', type=str, help='path_to_save_model_dir',required=True,)
 
     args = parser.parse_args()
-    session = Session('data', 'egr_model', ErgRunMode[args.mode.upper()])
+    session = Session(args.data_folder_name, args.model_folder, ErgRunMode[args.mode.upper()])
     session.create_session()
     session.start_session()
