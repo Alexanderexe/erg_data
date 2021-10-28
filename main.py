@@ -167,3 +167,6 @@ if __name__ == "__main__":
     session = Session(args.data_folder_name, args.model_folder, ErgRunMode[args.mode.upper()])
     session.create_session()
     session.start_session()
+
+    custom_reports = CustomReports(session.directory, args.model_folder)
+    custom_reports.get_new_clients()
